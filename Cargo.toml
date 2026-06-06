@@ -23,3 +23,7 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = true
+
+[lints.clippy]
+pedantic = "warn"
+perf = "warn"

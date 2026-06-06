@@ -8,7 +8,6 @@ use kube::core::admission::{AdmissionReview, AdmissionResponse};
 use k8s_openapi::api::core::v1::{Pod, Sysctl, Namespace};
 use std::sync::Arc;
 use std::collections::HashMap;
-use tracing;
 
 use crate::AppState;
 
@@ -67,45 +66,40 @@ fn calculate_merged_sysctls(
     target_sysctls
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn mutate_handler(
     State(state): State<Arc<AppState>>,
     Json(review): Json<AdmissionReview<Pod>>,
 ) -> impl IntoResponse {
-    let req = match &review.request {
-        Some(r) => r,
-        None => {
-            tracing::error!("Received AdmissionReview without request");
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(AdmissionReview::<Pod> {
-                    types: review.types.clone(),
-                    request: None,
-                    response: Some(AdmissionResponse::invalid("Missing request field")),
-                }),
-            );
-        }
+    let Some(req) = &review.request else {
+        tracing::error!("Received AdmissionReview without request");
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(AdmissionReview::<Pod> {
+                types: review.types.clone(),
+                request: None,
+                response: Some(AdmissionResponse::invalid("Missing request field")),
+            }),
+        );
     };
 
-    let pod = match &req.object {
-        Some(p) => p,
-        None => {
-            tracing::error!("Received AdmissionRequest without Pod object");
-            let mut response = AdmissionResponse::from(req);
-            response.allowed = false;
-            response.result = kube::core::Status::failure(
-                "Missing Pod object in request",
-                "InvalidRequest",
-            )
-            .with_code(400);
-            return (
-                StatusCode::OK,
-                Json(AdmissionReview {
-                    types: review.types.clone(),
-                    request: None,
-                    response: Some(response),
-                }),
-            );
-        }
+    let Some(pod) = &req.object else {
+        tracing::error!("Received AdmissionRequest without Pod object");
+        let mut response = AdmissionResponse::from(req);
+        response.allowed = false;
+        response.result = kube::core::Status::failure(
+            "Missing Pod object in request",
+            "InvalidRequest",
+        )
+        .with_code(400);
+        return (
+            StatusCode::OK,
+            Json(AdmissionReview {
+                types: review.types.clone(),
+                request: None,
+                response: Some(response),
+            }),
+        );
     };
 
     // 1. Determine namespace annotations

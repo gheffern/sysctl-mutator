@@ -9,7 +9,6 @@ use kube::{Api, Client};
 use kube::runtime::{reflector, watcher::{watcher, Config as WatcherConfig}};
 use k8s_openapi::api::core::v1::Namespace;
 use std::sync::Arc;
-use tracing;
 use tracing_subscriber::EnvFilter;
 
 #[global_allocator]

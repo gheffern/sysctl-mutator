@@ -1,6 +1,5 @@
 use clap::Parser;
 use std::collections::HashMap;
-use serde_json;
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
@@ -21,13 +20,13 @@ pub struct Config {
     #[arg(long, env = "TLS_KEY", default_value = "/etc/webhook/certs/tls.key")]
     pub tls_key: String,
 
-    /// Default fallback sysctls as a JSON object (e.g. '{"net.ipv4.ip_local_port_range": "1024 65000"}').
+    /// Default fallback sysctls as a JSON object (e.g. `'{"net.ipv4.ip_local_port_range": "1024 65000"}'`).
     #[arg(long, env = "DEFAULT_SYSCTLS", default_value = "{}")]
     pub default_sysctls: String,
 }
 
 impl Config {
-    /// Parse the default sysctls JSON string into a HashMap.
+    /// Parse the default sysctls JSON string into a `HashMap`.
     pub fn parse_default_sysctls(&self) -> Result<HashMap<String, String>, serde_json::Error> {
         serde_json::from_str(&self.default_sysctls)
     }
