@@ -141,4 +141,124 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
     }
+
+    #[tokio::test]
+    async fn test_mutate_handler_success() {
+        use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
+        use k8s_openapi::api::core::v1::Pod;
+        use std::collections::BTreeMap;
+
+        // 1. Setup mock reflector store and write Namespace with annotation
+        let (reader, mut writer) = reflector::store::<Namespace>();
+        let ns = Namespace {
+            metadata: ObjectMeta {
+                name: Some("test-ns".to_string()),
+                annotations: Some(BTreeMap::from([(
+                    "sysctl-mutator.elotl.co/sysctls".to_string(),
+                    r#"{"net.core.somaxconn": "2048"}"#.to_string(),
+                )])),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        writer.apply_watcher_event(&kube::runtime::watcher::Event::Apply(ns));
+
+        // 2. Setup AppState
+        let state = Arc::new(AppState {
+            ns_store: reader,
+            default_sysctls: std::collections::HashMap::new(),
+        });
+        let app = build_app(state);
+
+        // 3. Construct AdmissionReview request with a Pod
+        let pod = Pod {
+            metadata: ObjectMeta {
+                name: Some("test-pod".to_string()),
+                namespace: Some("test-ns".to_string()),
+                ..Default::default()
+            },
+            spec: Some(k8s_openapi::api::core::v1::PodSpec {
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let review_req: kube::core::admission::AdmissionReview<Pod> = serde_json::from_value(serde_json::json!({
+            "apiVersion": "admission.k8s.io/v1",
+            "kind": "AdmissionReview",
+            "request": {
+                "uid": "test-uid-1234",
+                "kind": {
+                    "group": "",
+                    "version": "v1",
+                    "kind": "Pod"
+                },
+                "resource": {
+                    "group": "",
+                    "version": "v1",
+                    "resource": "pods"
+                },
+                "requestKind": {
+                    "group": "",
+                    "version": "v1",
+                    "kind": "Pod"
+                },
+                "requestResource": {
+                    "group": "",
+                    "version": "v1",
+                    "resource": "pods"
+                },
+                "name": "test-pod",
+                "namespace": "test-ns",
+                "operation": "CREATE",
+                "userInfo": {
+                    "username": "admin",
+                    "groups": ["system:masters"]
+                },
+                "object": pod,
+                "dryRun": false
+            }
+        })).unwrap();
+
+        // 4. Send request to /mutate
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/mutate")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&review_req).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // 5. Parse and assert on response AdmissionReview
+        let body_bytes = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        let review_res: kube::core::admission::AdmissionReview<Pod> = serde_json::from_slice(&body_bytes).unwrap();
+        let res = review_res.response.unwrap();
+
+        assert!(res.allowed);
+        assert_eq!(res.uid, "test-uid-1234");
+        
+        // Patch should be present representing the mutation
+        let patch_bytes = res.patch.unwrap();
+        let patch_val: serde_json::Value = serde_json::from_slice(&patch_bytes).unwrap();
+        assert_eq!(
+            patch_val,
+            serde_json::json!([
+                {
+                    "op": "add",
+                    "path": "/spec/securityContext",
+                    "value": {
+                        "sysctls": [
+                            {"name": "net.core.somaxconn", "value": "2048"}
+                        ]
+                    }
+                }
+            ])
+        );
+    }
 }
