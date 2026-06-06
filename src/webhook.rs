@@ -102,12 +102,12 @@ pub async fn mutate_handler(
         );
     };
 
-    // Skip mutation for pods running on the host network to prevent API server validation failures
-    let is_host_network = pod.spec.as_ref()
-        .and_then(|spec| spec.host_network)
-        .unwrap_or(false);
+    // Skip mutation for pods sharing host namespaces (hostNetwork or hostIPC) to prevent API server validation failures
+    let spec = pod.spec.as_ref();
+    let is_host_network = spec.and_then(|s| s.host_network).unwrap_or(false);
+    let is_host_ipc = spec.and_then(|s| s.host_ipc).unwrap_or(false);
 
-    if is_host_network {
+    if is_host_network || is_host_ipc {
         let mut response = AdmissionResponse::from(req);
         response.allowed = true;
         return (
