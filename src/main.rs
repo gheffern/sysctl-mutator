@@ -24,6 +24,9 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Install default crypto provider for rustls
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     // 1. Initialize logging
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
