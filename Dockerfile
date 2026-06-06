@@ -1,5 +1,5 @@
 # Stage 1: Build the Rust binary
-FROM docker.io/library/rust:1.85 AS builder
+FROM docker.io/library/rust:latest AS builder
 WORKDIR /usr/src/app
 
 # Copy dependency manifests
