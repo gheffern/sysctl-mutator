@@ -21,7 +21,7 @@ To handle large volumes of concurrent TCP connections (e.g., for Nginx, HAProxy,
 
 **Namespace Annotation**:
 ```bash
-kubectl annotate namespace web-services sysctl-mutator.elotl.co/sysctls='{
+kubectl annotate namespace web-services sysctl-mutator.gromware.com/sysctls='{
   "net.core.somaxconn": "8192",
   "net.ipv4.ip_local_port_range": "1024 65535",
   "net.ipv4.tcp_fin_timeout": "15"
@@ -33,7 +33,7 @@ High-performance databases often require adjustments to socket queues and keepal
 
 **Namespace Annotation**:
 ```bash
-kubectl annotate namespace database sysctl-mutator.elotl.co/sysctls='{
+kubectl annotate namespace database sysctl-mutator.gromware.com/sysctls='{
   "net.core.somaxconn": "4096",
   "net.ipv4.tcp_keepalive_time": "600",
   "net.ipv4.tcp_keepalive_intvl": "10",

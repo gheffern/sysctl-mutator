@@ -22,7 +22,7 @@ fn calculate_merged_sysctls(
     // 1. Namespace overrides defaults
     if let Some(ns) = ns_opt {
         if let Some(annotations) = &ns.metadata.annotations {
-            if let Some(ann_val) = annotations.get("sysctl-mutator.elotl.co/sysctls") {
+            if let Some(ann_val) = annotations.get("sysctl-mutator.gromware.com/sysctls") {
                 match serde_json::from_str::<HashMap<String, String>>(ann_val) {
                     Ok(ns_sysctls) => {
                         for (k, v) in ns_sysctls {
@@ -31,7 +31,7 @@ fn calculate_merged_sysctls(
                     }
                     Err(e) => {
                         tracing::error!(
-                            "Failed to parse namespace annotation 'sysctl-mutator.elotl.co/sysctls' in namespace {}: {}",
+                            "Failed to parse namespace annotation 'sysctl-mutator.gromware.com/sysctls' in namespace {}: {}",
                             ns.metadata.name.as_deref().unwrap_or("unknown"),
                             e
                         );
@@ -219,7 +219,7 @@ mod tests {
     fn create_test_ns(annotation_val: Option<&str>) -> Namespace {
         let mut annotations = std::collections::BTreeMap::new();
         if let Some(val) = annotation_val {
-            annotations.insert("sysctl-mutator.elotl.co/sysctls".to_string(), val.to_string());
+            annotations.insert("sysctl-mutator.gromware.com/sysctls".to_string(), val.to_string());
         }
         Namespace {
             metadata: ObjectMeta {

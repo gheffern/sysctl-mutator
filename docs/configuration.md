@@ -5,7 +5,7 @@ The `sysctl-mutator` admission webhook resolves sysctl settings dynamically by m
 ## Precedence and Merge Order
 
 1. **Pod Specification (Highest Priority)**: Any sysctl explicitly defined in `spec.securityContext.sysctls` inside the Pod manifest.
-2. **Namespace Annotation (Medium Priority)**: Any sysctl defined in the target Namespace's `sysctl-mutator.elotl.co/sysctls` annotation.
+2. **Namespace Annotation (Medium Priority)**: Any sysctl defined in the target Namespace's `sysctl-mutator.gromware.com/sysctls` annotation.
 3. **Cluster-wide Default (Lowest Priority)**: The default fallback sysctl settings passed to the mutator binary via arguments or environment variables.
 
 Sysctls are merged key-by-key. For duplicate keys, the value defined at the higher priority level overrides the lower level.
@@ -24,10 +24,10 @@ env:
 ```
 
 ### 2. Namespace Annotations
-To enable namespaced configuration, annotate a namespace with a JSON map under the `sysctl-mutator.elotl.co/sysctls` key:
+To enable namespaced configuration, annotate a namespace with a JSON map under the `sysctl-mutator.gromware.com/sysctls` key:
 
 ```bash
-kubectl annotate namespace production sysctl-mutator.elotl.co/sysctls='{"net.core.somaxconn": "4096", "net.ipv4.tcp_rmem": "4096 87380 16777216"}'
+kubectl annotate namespace production sysctl-mutator.gromware.com/sysctls='{"net.core.somaxconn": "4096", "net.ipv4.tcp_rmem": "4096 87380 16777216"}'
 ```
 
 ### 3. Pod Specifications

@@ -154,7 +154,7 @@ mod tests {
             metadata: ObjectMeta {
                 name: Some("test-ns".to_string()),
                 annotations: Some(BTreeMap::from([(
-                    "sysctl-mutator.elotl.co/sysctls".to_string(),
+                    "sysctl-mutator.gromware.com/sysctls".to_string(),
                     r#"{"net.core.somaxconn": "2048"}"#.to_string(),
                 )])),
                 ..Default::default()

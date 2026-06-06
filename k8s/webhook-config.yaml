@@ -3,7 +3,7 @@ kind: MutatingWebhookConfiguration
 metadata:
   name: sysctl-mutator
 webhooks:
-  - name: sysctl-mutator.elotl.co
+  - name: sysctl-mutator.gromware.com
     rules:
       - apiGroups: [""]
         apiVersions: ["v1"]
