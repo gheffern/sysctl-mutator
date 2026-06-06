@@ -102,6 +102,24 @@ pub async fn mutate_handler(
         );
     };
 
+    // Skip mutation for pods running on the host network to prevent API server validation failures
+    let is_host_network = pod.spec.as_ref()
+        .and_then(|spec| spec.host_network)
+        .unwrap_or(false);
+
+    if is_host_network {
+        let mut response = AdmissionResponse::from(req);
+        response.allowed = true;
+        return (
+            StatusCode::OK,
+            Json(AdmissionReview {
+                types: review.types.clone(),
+                request: None,
+                response: Some(response),
+            }),
+        );
+    }
+
     // 1. Determine namespace annotations
     let ns_name = &req.namespace;
     let ns_opt = if let Some(name) = ns_name {
