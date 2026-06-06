@@ -31,3 +31,47 @@ impl Config {
         serde_json::from_str(&self.default_sysctls)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_default_sysctls_empty() {
+        let config = Config {
+            port: 8443,
+            bind_address: "0.0.0.0".to_string(),
+            tls_cert: "".to_string(),
+            tls_key: "".to_string(),
+            default_sysctls: "{}".to_string(),
+        };
+        let sysctls = config.parse_default_sysctls().unwrap();
+        assert!(sysctls.is_empty());
+    }
+
+    #[test]
+    fn test_parse_default_sysctls_valid() {
+        let config = Config {
+            port: 8443,
+            bind_address: "0.0.0.0".to_string(),
+            tls_cert: "".to_string(),
+            tls_key: "".to_string(),
+            default_sysctls: r#"{"net.ipv4.ip_local_port_range": "1024 65000"}"#.to_string(),
+        };
+        let sysctls = config.parse_default_sysctls().unwrap();
+        assert_eq!(sysctls.len(), 1);
+        assert_eq!(sysctls.get("net.ipv4.ip_local_port_range").unwrap(), "1024 65000");
+    }
+
+    #[test]
+    fn test_parse_default_sysctls_invalid() {
+        let config = Config {
+            port: 8443,
+            bind_address: "0.0.0.0".to_string(),
+            tls_cert: "".to_string(),
+            tls_key: "".to_string(),
+            default_sysctls: "invalid-json".to_string(),
+        };
+        assert!(config.parse_default_sysctls().is_err());
+    }
+}

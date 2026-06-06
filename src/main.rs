@@ -61,11 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         default_sysctls,
     });
 
-    let app = Router::new()
-        .route("/mutate", post(webhook::mutate_handler))
-        .route("/healthz", get(|| async { "OK" }))
-        .route("/readyz", get(|| async { "OK" }))
-        .with_state(state);
+    let app = build_app(state);
 
     // 6. Bind Axum Server with TLS
     let tls_config = RustlsConfig::from_pem_file(&cfg.tls_cert, &cfg.tls_key)
@@ -83,4 +79,66 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     Ok(())
+}
+
+pub fn build_app(state: Arc<AppState>) -> Router {
+    Router::new()
+        .route("/mutate", post(webhook::mutate_handler))
+        .route("/healthz", get(|| async { "OK" }))
+        .route("/readyz", get(|| async { "OK" }))
+        .with_state(state)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+    };
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn test_healthz() {
+        let (reader, _) = reflector::store();
+        let state = Arc::new(AppState {
+            ns_store: reader,
+            default_sysctls: std::collections::HashMap::new(),
+        });
+        let app = build_app(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/healthz")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_readyz() {
+        let (reader, _) = reflector::store();
+        let state = Arc::new(AppState {
+            ns_store: reader,
+            default_sysctls: std::collections::HashMap::new(),
+        });
+        let app = build_app(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/readyz")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
 }
