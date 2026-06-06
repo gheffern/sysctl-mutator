@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sysctl-mutator
+  namespace: sysctl-mutator
+  labels:
+    app: sysctl-mutator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sysctl-mutator
+  template:
+    metadata:
+      labels:
+        app: sysctl-mutator
+    spec:
+      serviceAccountName: sysctl-mutator
+      containers:
+        - name: webhook
+          image: sysctl-mutator:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DEFAULT_SYSCTLS
+              value: '{"net.ipv4.ip_local_port_range": "1024 65000"}'
+            - name: PORT
+              value: "8443"
+            - name: BIND_ADDRESS
+              value: "0.0.0.0"
+            - name: TLS_CERT
+              value: "/etc/webhook/certs/tls.crt"
+            - name: TLS_KEY
+              value: "/etc/webhook/certs/tls.key"
+          ports:
+            - containerPort: 8443
+              name: https
+          volumeMounts:
+            - name: certs
+              mountPath: /etc/webhook/certs
+              readOnly: true
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: certs
+          secret:
+            secretName: sysctl-mutator-certs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sysctl-mutator
+  namespace: sysctl-mutator
+  labels:
+    app: sysctl-mutator
+spec:
+  ports:
+    - port: 443
+      targetPort: 8443
+      name: https
+  selector:
+    app: sysctl-mutator

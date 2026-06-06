@@ -1,0 +1,283 @@
+use axum::{
+    extract::State,
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
+use kube::core::admission::{AdmissionReview, AdmissionResponse};
+use k8s_openapi::api::core::v1::{Pod, Sysctl, Namespace};
+use std::sync::Arc;
+use std::collections::HashMap;
+use tracing;
+
+use crate::AppState;
+
+/// Core business logic: hierarchically merges default, namespace-level, and pod-level sysctls.
+fn calculate_merged_sysctls(
+    pod: &Pod,
+    ns_opt: Option<&Namespace>,
+    default_sysctls: &HashMap<String, String>,
+) -> Vec<Sysctl> {
+    let mut merged = default_sysctls.clone();
+
+    // 1. Namespace overrides defaults
+    if let Some(ns) = ns_opt {
+        if let Some(annotations) = &ns.metadata.annotations {
+            if let Some(ann_val) = annotations.get("sysctl-mutator.elotl.co/sysctls") {
+                match serde_json::from_str::<HashMap<String, String>>(ann_val) {
+                    Ok(ns_sysctls) => {
+                        for (k, v) in ns_sysctls {
+                            merged.insert(k, v);
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!(
+                            "Failed to parse namespace annotation 'sysctl-mutator.elotl.co/sysctls' in namespace {}: {}",
+                            ns.metadata.name.as_deref().unwrap_or("unknown"),
+                            e
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Pod overrides both
+    let mut pod_sysctls = HashMap::new();
+    if let Some(spec) = &pod.spec {
+        if let Some(sec_ctx) = &spec.security_context {
+            if let Some(sysctls) = &sec_ctx.sysctls {
+                for s in sysctls {
+                    pod_sysctls.insert(s.name.clone(), s.value.clone());
+                }
+            }
+        }
+    }
+
+    for (k, v) in &pod_sysctls {
+        merged.insert(k.clone(), v.clone());
+    }
+
+    // Convert to sorted vector
+    let mut target_sysctls: Vec<Sysctl> = merged
+        .into_iter()
+        .map(|(name, value)| Sysctl { name, value })
+        .collect();
+    target_sysctls.sort_by(|a, b| a.name.cmp(&b.name));
+    target_sysctls
+}
+
+pub async fn mutate_handler(
+    State(state): State<Arc<AppState>>,
+    Json(review): Json<AdmissionReview<Pod>>,
+) -> impl IntoResponse {
+    let req = match &review.request {
+        Some(r) => r,
+        None => {
+            tracing::error!("Received AdmissionReview without request");
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(AdmissionReview::<Pod> {
+                    types: review.types.clone(),
+                    request: None,
+                    response: Some(AdmissionResponse::invalid("Missing request field")),
+                }),
+            );
+        }
+    };
+
+    let pod = match &req.object {
+        Some(p) => p,
+        None => {
+            tracing::error!("Received AdmissionRequest without Pod object");
+            let mut response = AdmissionResponse::from(req);
+            response.allowed = false;
+            response.result = kube::core::Status::failure(
+                "Missing Pod object in request",
+                "InvalidRequest",
+            )
+            .with_code(400);
+            return (
+                StatusCode::OK,
+                Json(AdmissionReview {
+                    types: review.types.clone(),
+                    request: None,
+                    response: Some(response),
+                }),
+            );
+        }
+    };
+
+    // 1. Determine namespace annotations
+    let ns_name = &req.namespace;
+    let ns_opt = if let Some(name) = ns_name {
+        let ns_ref = kube::runtime::reflector::ObjectRef::new(name);
+        state.ns_store.get(&ns_ref).map(|ns| ns.as_ref().clone())
+    } else {
+        None
+    };
+
+    // 2. Calculate target sysctls
+    let target_sysctls = calculate_merged_sysctls(pod, ns_opt.as_ref(), &state.default_sysctls);
+
+    // Get existing sysctls
+    let mut existing_sysctls = if let Some(spec) = &pod.spec {
+        if let Some(sec_ctx) = &spec.security_context {
+            sec_ctx.sysctls.clone().unwrap_or_default()
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
+    existing_sysctls.sort_by(|a, b| a.name.cmp(&b.name));
+
+    // If no change, allowed = true, no patch
+    if target_sysctls == existing_sysctls {
+        let mut response = AdmissionResponse::from(req);
+        response.allowed = true;
+        return (
+            StatusCode::OK,
+            Json(AdmissionReview {
+                types: review.types.clone(),
+                request: None,
+                response: Some(response),
+            }),
+        );
+    }
+
+    // Build JSON Patch
+    let has_security_context = pod.spec.as_ref()
+        .and_then(|s| s.security_context.as_ref())
+        .is_some();
+    let has_sysctls = pod.spec.as_ref()
+        .and_then(|s| s.security_context.as_ref())
+        .and_then(|sc| sc.sysctls.as_ref())
+        .is_some();
+
+    let patch_val = if !has_security_context {
+        serde_json::json!([
+            {
+                "op": "add",
+                "path": "/spec/securityContext",
+                "value": {
+                    "sysctls": target_sysctls
+                }
+            }
+        ])
+    } else if !has_sysctls {
+        serde_json::json!([
+            {
+                "op": "add",
+                "path": "/spec/securityContext/sysctls",
+                "value": target_sysctls
+            }
+        ])
+    } else {
+        serde_json::json!([
+            {
+                "op": "replace",
+                "path": "/spec/securityContext/sysctls",
+                "value": target_sysctls
+            }
+        ])
+    };
+
+    let patch: json_patch::Patch = serde_json::from_value(patch_val).unwrap();
+
+    let mut response = AdmissionResponse::from(req);
+    response.allowed = true;
+    response = response.with_patch(patch).unwrap();
+
+    (
+        StatusCode::OK,
+        Json(AdmissionReview {
+            types: review.types.clone(),
+            request: None,
+            response: Some(response),
+        }),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
+    use k8s_openapi::api::core::v1::PodSecurityContext;
+
+    fn create_test_pod(sysctls: Option<Vec<Sysctl>>) -> Pod {
+        Pod {
+            metadata: ObjectMeta {
+                name: Some("test-pod".to_string()),
+                ..Default::default()
+            },
+            spec: Some(k8s_openapi::api::core::v1::PodSpec {
+                security_context: sysctls.map(|s| PodSecurityContext {
+                    sysctls: Some(s),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    }
+
+    fn create_test_ns(annotation_val: Option<&str>) -> Namespace {
+        let mut annotations = std::collections::BTreeMap::new();
+        if let Some(val) = annotation_val {
+            annotations.insert("sysctl-mutator.elotl.co/sysctls".to_string(), val.to_string());
+        }
+        Namespace {
+            metadata: ObjectMeta {
+                name: Some("test-namespace".to_string()),
+                annotations: Some(annotations),
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_hierarchical_merge() {
+        // 1. Defaults setup
+        let mut defaults = HashMap::new();
+        defaults.insert("net.ipv4.ip_local_port_range".to_string(), "1024 65000".to_string());
+        defaults.insert("net.core.somaxconn".to_string(), "1024".to_string());
+
+        // Scenario A: Pod with no annotations, NS with no annotations -> inherits only defaults
+        let pod_a = create_test_pod(None);
+        let ns_a = create_test_ns(None);
+        let merged_a = calculate_merged_sysctls(&pod_a, Some(&ns_a), &defaults);
+        assert_eq!(merged_a.len(), 2);
+        assert_eq!(merged_a[0].name, "net.core.somaxconn");
+        assert_eq!(merged_a[0].value, "1024");
+        assert_eq!(merged_a[1].name, "net.ipv4.ip_local_port_range");
+        assert_eq!(merged_a[1].value, "1024 65000");
+
+        // Scenario B: NS overrides a default and adds a new one
+        let ns_b = create_test_ns(Some(r#"{"net.core.somaxconn": "2048", "net.ipv4.tcp_rmem": "4096 87380 16777216"}"#));
+        let merged_b = calculate_merged_sysctls(&pod_a, Some(&ns_b), &defaults);
+        assert_eq!(merged_b.len(), 3);
+        // net.core.somaxconn should be overridden by Namespace to 2048
+        let somaxconn = merged_b.iter().find(|s| s.name == "net.core.somaxconn").unwrap();
+        assert_eq!(somaxconn.value, "2048");
+        // net.ipv4.tcp_rmem should be added
+        let tcp_rmem = merged_b.iter().find(|s| s.name == "net.ipv4.tcp_rmem").unwrap();
+        assert_eq!(tcp_rmem.value, "4096 87380 16777216");
+        // net.ipv4.ip_local_port_range should still be default
+        let port_range = merged_b.iter().find(|s| s.name == "net.ipv4.ip_local_port_range").unwrap();
+        assert_eq!(port_range.value, "1024 65000");
+
+        // Scenario C: Pod overrides default and Namespace
+        let pod_c = create_test_pod(Some(vec![
+            Sysctl {
+                name: "net.core.somaxconn".to_string(),
+                value: "4096".to_string(),
+            }
+        ]));
+        let merged_c = calculate_merged_sysctls(&pod_c, Some(&ns_b), &defaults);
+        let somaxconn_c = merged_c.iter().find(|s| s.name == "net.core.somaxconn").unwrap();
+        // Pod value 4096 should override NS value 2048 and default value 1024
+        assert_eq!(somaxconn_c.value, "4096");
+    }
+}

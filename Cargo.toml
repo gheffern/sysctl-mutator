@@ -1,0 +1,25 @@
+[package]
+name = "sysctl-mutator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.38", features = ["full"] }
+axum = "0.7"
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+futures = "0.3"
+kube = { version = "0.93", features = ["client", "runtime", "derive", "admission"] }
+k8s-openapi = { version = "0.22", features = ["v1_29"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+json-patch = "2.0"
+mimalloc = "0.1"
+clap = { version = "4.4", features = ["derive", "env"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
