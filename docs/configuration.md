@@ -41,6 +41,24 @@ spec:
         value: "8192"
 ```
 
+### 4. Low-Privilege / Zero-Cluster-RBAC Mode (Optional)
+If you want to run `sysctl-mutator` without cluster-wide Kubernetes API permissions, you can disable the namespace watcher. This is particularly useful in restricted multi-tenant environments where `ClusterRole` and `ClusterRoleBinding` resources are not allowed.
+
+Enable this by setting the `DISABLE_NAMESPACE_REFLECTOR` environment variable to `"true"` (or using the `--disable-namespace-reflector` command-line argument):
+
+```yaml
+env:
+  - name: DISABLE_NAMESPACE_REFLECTOR
+    value: "true"
+```
+
+**Impact:**
+* **No Namespace RBAC Needed**: The webhook no longer queries the API server. You can entirely omit the `ClusterRole` and `ClusterRoleBinding` defined in `k8s/rbac.yaml`.
+* **Simplified Precedence**: The hierarchical merge simplifies to:
+  1. **Pod Specification (Highest Priority)**
+  2. **Cluster-wide Default (Lowest Priority)**
+  *(Namespace-level annotations are ignored since the webhook has no access to Namespace resources).*
+
 ---
 
 ## Mutation Mechanics
