@@ -18,8 +18,8 @@ Before deploying, choose the mode that matches your security and feature require
 
 | Mode | Namespace Annotations | Required RBAC Permissions | Recommended For |
 | :--- | :--- | :--- | :--- |
-| **Standard Mode** (Default) | **Enabled** (Merges default + Namespace overrides + Pod spec) | Cluster-wide `get`, `list`, `watch` on `namespaces` | Standard clusters where namespace-level overrides are desired. |
-| **Low-Privilege Mode** | **Disabled** (Merges default + Pod spec only) | **None** (Zero cluster-scoped permissions) | Secure, multi-tenant clusters where cluster-wide roles are restricted. |
+| **Low-Privilege Mode** (Default) | **Disabled** (Merges default + Pod spec only) | **None** (Zero cluster-scoped permissions) | Secure, multi-tenant clusters where cluster-wide roles are restricted. |
+| **Standard Mode** | **Enabled** (Merges default + Namespace overrides + Pod spec) | Cluster-wide `get`, `list`, `watch` on `namespaces` | Standard clusters where namespace-level overrides are desired. |
 
 ---
 
@@ -29,20 +29,21 @@ Before deploying, choose the mode that matches your security and feature require
 
 Helm is the recommended deployment method because it automatically handles self-signed TLS certificate generation, namespace exclusions, and modular configurations.
 
-1. **Deploy with Standard Mode (Default):**
+1. **Deploy with Low-Privilege Mode (Default):**
+   Deploy without requiring any cluster-scoped RBAC permissions:
    ```bash
    helm install sysctl-mutator k8s/charts/sysctl-mutator \
      --namespace sysctl-mutator \
      --create-namespace
    ```
 
-2. **Deploy with Low-Privilege Mode:**
-   Disable the namespace watcher to remove all cluster-scoped RBAC requirements:
+2. **Deploy with Standard Mode:**
+   Enable the namespace reflector to support namespace-level annotations (requires cluster-wide namespace read/watch permissions):
    ```bash
    helm install sysctl-mutator k8s/charts/sysctl-mutator \
      --namespace sysctl-mutator \
      --create-namespace \
-     --set disableNamespaceReflector=true
+     --set disableNamespaceReflector=false
    ```
 
 3. **Configure Custom Defaults:**
@@ -76,7 +77,7 @@ If you prefer deploying raw manifests, they are located under the `k8s/` directo
    kubectl apply -f k8s/webhook-config.yaml
    ```
 
-To run static manifests in Low-Privilege mode, uncomment the `DISABLE_NAMESPACE_REFLECTOR` environment variable in `k8s/deployment.yaml` and omit `rbac.yaml`'s `ClusterRole` and `ClusterRoleBinding`.
+To run static manifests in Standard mode (with namespace-wide annotations enabled), set the `DISABLE_NAMESPACE_REFLECTOR` environment variable to `"false"` in `k8s/deployment.yaml` and uncomment the `ClusterRole` and `ClusterRoleBinding` resources in `k8s/rbac.yaml`.
 
 ---
 
