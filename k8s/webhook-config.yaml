@@ -19,10 +19,11 @@ webhooks:
       caBundle: "" # Needs to be populated by cert-manager or manual bootstrap
     admissionReviewVersions: ["v1"]
     sideEffects: None
-    timeoutSeconds: 10
-    # Safety exclusions to prevent mutator outage from locking system namespaces
+    timeoutSeconds: 1
+    failurePolicy: Ignore
+    # Exclude the webhook's own namespace to prevent circular bootstrap lockouts
     namespaceSelector:
       matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: NotIn
-          values: ["kube-system", "kube-public", "sysctl-mutator"]
+          values: ["sysctl-mutator"]

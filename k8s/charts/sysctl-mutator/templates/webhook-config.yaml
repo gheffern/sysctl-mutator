@@ -32,7 +32,7 @@ webhooks:
       {{- end }}
     admissionReviewVersions: ["v1"]
     sideEffects: None
-    timeoutSeconds: 10
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 1 }}
     failurePolicy: {{ .Values.webhook.failurePolicy }}
     namespaceSelector:
       matchExpressions:
