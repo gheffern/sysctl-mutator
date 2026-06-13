@@ -6,8 +6,9 @@ A high-performance Kubernetes Mutating Admission Webhook written in Rust, utiliz
 - **Hierarchical Merge**: Combines sysctls from three levels (Pod spec > Namespace annotation > Cluster fallback default) where more specific settings override less specific ones.
 - **In-Memory Watch Cache**: Watches Namespace resources using Kubernetes reflectors to achieve sub-millisecond mutations during pod admission.
 - **Low-Privilege Mode**: Optional zero-cluster-RBAC mode (`DISABLE_NAMESPACE_REFLECTOR=true`) to run without any namespace watching/reading permissions, ideal for restricted multi-tenant clusters.
+- **Fail-Open Security**: Webhook defaults to fail-open (`failurePolicy: Ignore`) with a `1s` timeout. If the webhook is unavailable, pod scheduling is not blocked.
+- **Safety Exclusions**: Dynamically excludes its own installation namespace to prevent circular bootstrap lockouts, while allowing other namespaces (like `kube-system`) to be safely mutated.
 - **Minimal Docker Footprint**: Compiled with LTO and `mimalloc`, packaged inside a minimal Google Distroless CC runtime container.
-- **Safety Exclusions**: Safe configurations excluding critical namespaces (e.g., `kube-system`, `kube-public`, and the webhook's own namespace) to prevent cluster bootstrapping locks.
 
 ---
 
