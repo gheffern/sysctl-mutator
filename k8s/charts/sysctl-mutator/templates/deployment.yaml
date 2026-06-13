@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sysctl-mutator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sysctl-mutator.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "sysctl-mutator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "sysctl-mutator.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "sysctl-mutator.serviceAccountName" . }}
+      containers:
+        - name: webhook
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: DEFAULT_SYSCTLS
+              value: {{ toJson .Values.defaultSysctls | quote }}
+            - name: PORT
+              value: {{ .Values.port | quote }}
+            - name: BIND_ADDRESS
+              value: {{ .Values.bindAddress | quote }}
+            - name: TLS_CERT
+              value: "/etc/webhook/certs/tls.crt"
+            - name: TLS_KEY
+              value: "/etc/webhook/certs/tls.key"
+            {{- if .Values.disableNamespaceReflector }}
+            - name: DISABLE_NAMESPACE_REFLECTOR
+              value: "true"
+            {{- end }}
+          ports:
+            - name: https
+              containerPort: {{ .Values.port }}
+              protocol: TCP
+          volumeMounts:
+            - name: certs
+              mountPath: /etc/webhook/certs
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ .Values.port }}
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.port }}
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: certs
+          secret:
+            secretName: {{ include "sysctl-mutator.tlsSecretName" . }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
