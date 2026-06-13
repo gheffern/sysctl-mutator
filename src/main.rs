@@ -152,6 +152,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn test_mutate_handler_success() {
         use k8s_openapi::api::core::v1::Pod;
         use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;

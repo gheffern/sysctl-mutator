@@ -41,8 +41,8 @@ mod tests {
         let config = Config {
             port: 8443,
             bind_address: "0.0.0.0".to_string(),
-            tls_cert: "".to_string(),
-            tls_key: "".to_string(),
+            tls_cert: String::new(),
+            tls_key: String::new(),
             default_sysctls: "{}".to_string(),
         };
         let sysctls = config.parse_default_sysctls().unwrap();
@@ -54,8 +54,8 @@ mod tests {
         let config = Config {
             port: 8443,
             bind_address: "0.0.0.0".to_string(),
-            tls_cert: "".to_string(),
-            tls_key: "".to_string(),
+            tls_cert: String::new(),
+            tls_key: String::new(),
             default_sysctls: r#"{"net.ipv4.ip_local_port_range": "1024 65000"}"#.to_string(),
         };
         let sysctls = config.parse_default_sysctls().unwrap();
@@ -71,8 +71,8 @@ mod tests {
         let config = Config {
             port: 8443,
             bind_address: "0.0.0.0".to_string(),
-            tls_cert: "".to_string(),
-            tls_key: "".to_string(),
+            tls_cert: String::new(),
+            tls_key: String::new(),
             default_sysctls: "invalid-json".to_string(),
         };
         assert!(config.parse_default_sysctls().is_err());
