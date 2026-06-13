@@ -48,7 +48,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. Set up Namespace Reflector (In-memory cache)
     let (reader, writer) = reflector::store();
 
-    if !cfg.disable_namespace_reflector {
+    if cfg.disable_namespace_reflector {
+        tracing::info!("Namespace reflector is disabled. Webhook running in low-privilege mode.");
+    } else {
         tracing::info!("Initializing Kubernetes client and namespace watcher...");
         let client = Client::try_default().await?;
         let namespaces: Api<Namespace> = Api::all(client);
@@ -64,8 +66,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         });
-    } else {
-        tracing::info!("Namespace reflector is disabled. Webhook running in low-privilege mode.");
     }
 
     // 5. Build Axum Router
