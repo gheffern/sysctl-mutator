@@ -60,7 +60,10 @@ mod tests {
         };
         let sysctls = config.parse_default_sysctls().unwrap();
         assert_eq!(sysctls.len(), 1);
-        assert_eq!(sysctls.get("net.ipv4.ip_local_port_range").unwrap(), "1024 65000");
+        assert_eq!(
+            sysctls.get("net.ipv4.ip_local_port_range").unwrap(),
+            "1024 65000"
+        );
     }
 
     #[test]

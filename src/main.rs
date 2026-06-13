@@ -5,9 +5,12 @@ use axum::{
 use axum_server::tls_rustls::RustlsConfig;
 use clap::Parser;
 use futures::StreamExt;
-use kube::{Api, Client};
-use kube::runtime::{reflector, watcher::{watcher, Config as WatcherConfig}};
 use k8s_openapi::api::core::v1::Namespace;
+use kube::runtime::{
+    reflector,
+    watcher::{watcher, Config as WatcherConfig},
+};
+use kube::{Api, Client};
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
@@ -29,14 +32,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 1. Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
         .init();
 
     tracing::info!("Starting sysctl-mutator admission webhook...");
 
     // 2. Parse configuration
     let cfg = config::Config::parse();
-    let default_sysctls = cfg.parse_default_sysctls()
+    let default_sysctls = cfg
+        .parse_default_sysctls()
         .expect("Failed to parse DEFAULT_SYSCTLS env/arg as JSON");
 
     // 3. Initialize Kubernetes Client
@@ -147,8 +153,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_mutate_handler_success() {
-        use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
         use k8s_openapi::api::core::v1::Pod;
+        use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
         use std::collections::BTreeMap;
 
         // 1. Setup mock reflector store and write Namespace with annotation
@@ -186,42 +192,44 @@ mod tests {
             ..Default::default()
         };
 
-        let review_req: kube::core::admission::AdmissionReview<Pod> = serde_json::from_value(serde_json::json!({
-            "apiVersion": "admission.k8s.io/v1",
-            "kind": "AdmissionReview",
-            "request": {
-                "uid": "test-uid-1234",
-                "kind": {
-                    "group": "",
-                    "version": "v1",
-                    "kind": "Pod"
-                },
-                "resource": {
-                    "group": "",
-                    "version": "v1",
-                    "resource": "pods"
-                },
-                "requestKind": {
-                    "group": "",
-                    "version": "v1",
-                    "kind": "Pod"
-                },
-                "requestResource": {
-                    "group": "",
-                    "version": "v1",
-                    "resource": "pods"
-                },
-                "name": "test-pod",
-                "namespace": "test-ns",
-                "operation": "CREATE",
-                "userInfo": {
-                    "username": "admin",
-                    "groups": ["system:masters"]
-                },
-                "object": pod,
-                "dryRun": false
-            }
-        })).unwrap();
+        let review_req: kube::core::admission::AdmissionReview<Pod> =
+            serde_json::from_value(serde_json::json!({
+                "apiVersion": "admission.k8s.io/v1",
+                "kind": "AdmissionReview",
+                "request": {
+                    "uid": "test-uid-1234",
+                    "kind": {
+                        "group": "",
+                        "version": "v1",
+                        "kind": "Pod"
+                    },
+                    "resource": {
+                        "group": "",
+                        "version": "v1",
+                        "resource": "pods"
+                    },
+                    "requestKind": {
+                        "group": "",
+                        "version": "v1",
+                        "kind": "Pod"
+                    },
+                    "requestResource": {
+                        "group": "",
+                        "version": "v1",
+                        "resource": "pods"
+                    },
+                    "name": "test-pod",
+                    "namespace": "test-ns",
+                    "operation": "CREATE",
+                    "userInfo": {
+                        "username": "admin",
+                        "groups": ["system:masters"]
+                    },
+                    "object": pod,
+                    "dryRun": false
+                }
+            }))
+            .unwrap();
 
         // 4. Send request to /mutate
         let response = app
@@ -239,13 +247,16 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         // 5. Parse and assert on response AdmissionReview
-        let body_bytes = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
-        let review_res: kube::core::admission::AdmissionReview<Pod> = serde_json::from_slice(&body_bytes).unwrap();
+        let body_bytes = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+            .await
+            .unwrap();
+        let review_res: kube::core::admission::AdmissionReview<Pod> =
+            serde_json::from_slice(&body_bytes).unwrap();
         let res = review_res.response.unwrap();
 
         assert!(res.allowed);
         assert_eq!(res.uid, "test-uid-1234");
-        
+
         // Patch should be present representing the mutation
         let patch_bytes = res.patch.unwrap();
         let patch_val: serde_json::Value = serde_json::from_slice(&patch_bytes).unwrap();

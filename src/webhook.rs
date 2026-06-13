@@ -1,13 +1,8 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
-use kube::core::admission::{AdmissionReview, AdmissionResponse};
-use k8s_openapi::api::core::v1::{Pod, Sysctl, Namespace};
-use std::sync::Arc;
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use k8s_openapi::api::core::v1::{Namespace, Pod, Sysctl};
+use kube::core::admission::{AdmissionResponse, AdmissionReview};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::AppState;
 
@@ -87,11 +82,9 @@ pub async fn mutate_handler(
         tracing::error!("Received AdmissionRequest without Pod object");
         let mut response = AdmissionResponse::from(req);
         response.allowed = false;
-        response.result = kube::core::Status::failure(
-            "Missing Pod object in request",
-            "InvalidRequest",
-        )
-        .with_code(400);
+        response.result =
+            kube::core::Status::failure("Missing Pod object in request", "InvalidRequest")
+                .with_code(400);
         return (
             StatusCode::OK,
             Json(AdmissionReview {
@@ -159,10 +152,14 @@ pub async fn mutate_handler(
     }
 
     // Build JSON Patch
-    let has_security_context = pod.spec.as_ref()
+    let has_security_context = pod
+        .spec
+        .as_ref()
         .and_then(|s| s.security_context.as_ref())
         .is_some();
-    let has_sysctls = pod.spec.as_ref()
+    let has_sysctls = pod
+        .spec
+        .as_ref()
         .and_then(|s| s.security_context.as_ref())
         .and_then(|sc| sc.sysctls.as_ref())
         .is_some();
@@ -214,8 +211,8 @@ pub async fn mutate_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
     use k8s_openapi::api::core::v1::PodSecurityContext;
+    use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 
     fn create_test_pod(sysctls: Option<Vec<Sysctl>>) -> Pod {
         Pod {
@@ -237,7 +234,10 @@ mod tests {
     fn create_test_ns(annotation_val: Option<&str>) -> Namespace {
         let mut annotations = std::collections::BTreeMap::new();
         if let Some(val) = annotation_val {
-            annotations.insert("sysctl-mutator.gromware.com/sysctls".to_string(), val.to_string());
+            annotations.insert(
+                "sysctl-mutator.gromware.com/sysctls".to_string(),
+                val.to_string(),
+            );
         }
         Namespace {
             metadata: ObjectMeta {
@@ -253,7 +253,10 @@ mod tests {
     fn test_hierarchical_merge() {
         // 1. Defaults setup
         let mut defaults = HashMap::new();
-        defaults.insert("net.ipv4.ip_local_port_range".to_string(), "1024 65000".to_string());
+        defaults.insert(
+            "net.ipv4.ip_local_port_range".to_string(),
+            "1024 65000".to_string(),
+        );
         defaults.insert("net.core.somaxconn".to_string(), "1024".to_string());
 
         // Scenario A: Pod with no annotations, NS with no annotations -> inherits only defaults
@@ -267,28 +270,40 @@ mod tests {
         assert_eq!(merged_a[1].value, "1024 65000");
 
         // Scenario B: NS overrides a default and adds a new one
-        let ns_b = create_test_ns(Some(r#"{"net.core.somaxconn": "2048", "net.ipv4.tcp_rmem": "4096 87380 16777216"}"#));
+        let ns_b = create_test_ns(Some(
+            r#"{"net.core.somaxconn": "2048", "net.ipv4.tcp_rmem": "4096 87380 16777216"}"#,
+        ));
         let merged_b = calculate_merged_sysctls(&pod_a, Some(&ns_b), &defaults);
         assert_eq!(merged_b.len(), 3);
         // net.core.somaxconn should be overridden by Namespace to 2048
-        let somaxconn = merged_b.iter().find(|s| s.name == "net.core.somaxconn").unwrap();
+        let somaxconn = merged_b
+            .iter()
+            .find(|s| s.name == "net.core.somaxconn")
+            .unwrap();
         assert_eq!(somaxconn.value, "2048");
         // net.ipv4.tcp_rmem should be added
-        let tcp_rmem = merged_b.iter().find(|s| s.name == "net.ipv4.tcp_rmem").unwrap();
+        let tcp_rmem = merged_b
+            .iter()
+            .find(|s| s.name == "net.ipv4.tcp_rmem")
+            .unwrap();
         assert_eq!(tcp_rmem.value, "4096 87380 16777216");
         // net.ipv4.ip_local_port_range should still be default
-        let port_range = merged_b.iter().find(|s| s.name == "net.ipv4.ip_local_port_range").unwrap();
+        let port_range = merged_b
+            .iter()
+            .find(|s| s.name == "net.ipv4.ip_local_port_range")
+            .unwrap();
         assert_eq!(port_range.value, "1024 65000");
 
         // Scenario C: Pod overrides default and Namespace
-        let pod_c = create_test_pod(Some(vec![
-            Sysctl {
-                name: "net.core.somaxconn".to_string(),
-                value: "4096".to_string(),
-            }
-        ]));
+        let pod_c = create_test_pod(Some(vec![Sysctl {
+            name: "net.core.somaxconn".to_string(),
+            value: "4096".to_string(),
+        }]));
         let merged_c = calculate_merged_sysctls(&pod_c, Some(&ns_b), &defaults);
-        let somaxconn_c = merged_c.iter().find(|s| s.name == "net.core.somaxconn").unwrap();
+        let somaxconn_c = merged_c
+            .iter()
+            .find(|s| s.name == "net.core.somaxconn")
+            .unwrap();
         // Pod value 4096 should override NS value 2048 and default value 1024
         assert_eq!(somaxconn_c.value, "4096");
     }
