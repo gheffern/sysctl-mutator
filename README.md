@@ -85,3 +85,10 @@ To run static manifests in Namespace-Reflector mode (with namespace-wide annotat
 - [Configuration and Merging Strategy](docs/configuration.md)
 - [Example Use Cases and Configurations](docs/use-cases.md)
 - [Developer & Contributing Guide](CONTRIBUTING.md)
+
+---
+
+## AI Usage
+
+AI was used heavily in the creation of `sysctl-mutator`. For the purposes of this repository, AI is viewed as an available tool to be used at the developer's discretion. Its use is neither encouraged nor discouraged.
+
