@@ -8,25 +8,27 @@ kind: ServiceAccount
 metadata:
   name: sysctl-mutator
   namespace: sysctl-mutator
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: sysctl-mutator
-rules:
-  - apiGroups: [""]
-    resources: ["namespaces"]
-    verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: sysctl-mutator
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: sysctl-mutator
-subjects:
-  - kind: ServiceAccount
-    name: sysctl-mutator
-    namespace: sysctl-mutator
+# ---
+# # The ClusterRole and ClusterRoleBinding below are only required if running in Namespace Reflector mode.
+# # (i.e. if DISABLE_NAMESPACE_REFLECTOR is set to "false" or omitted in the deployment).
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: ClusterRole
+# metadata:
+#   name: sysctl-mutator
+# rules:
+#   - apiGroups: [""]
+#     resources: ["namespaces"]
+#     verbs: ["get", "list", "watch"]
+# ---
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: ClusterRoleBinding
+# metadata:
+#   name: sysctl-mutator
+# roleRef:
+#   apiGroup: rbac.authorization.k8s.io
+#   kind: ClusterRole
+#   name: sysctl-mutator
+# subjects:
+#   - kind: ServiceAccount
+#     name: sysctl-mutator
+#     namespace: sysctl-mutator

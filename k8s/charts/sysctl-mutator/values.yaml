@@ -22,7 +22,7 @@ bindAddress: 0.0.0.0
 # Low-Privilege / Zero-Cluster-RBAC Mode:
 # When set to true, the namespace reflector/watcher is disabled.
 # The webhook will run without requiring any cluster-wide Namespace read/watch permissions.
-disableNamespaceReflector: false
+disableNamespaceReflector: true
 
 # Cluster-wide fallback sysctls.
 # Specified as a structured YAML map, which will be serialized to JSON in the template.
