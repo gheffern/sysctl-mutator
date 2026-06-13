@@ -1,0 +1,6 @@
+apiVersion: v2
+name: sysctl-mutator
+description: A high-performance Kubernetes Mutating Admission Webhook to dynamically configure sysctl values.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,50 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "sysctl-mutator.fullname" . }}
+  labels:
+    {{- include "sysctl-mutator.labels" . | nindent 4 }}
+  annotations:
+    {{- if eq .Values.tls.mode "cert-manager" }}
+    cert-manager.io/inject-ca-from: {{ printf "%s/%s" .Release.Namespace (include "sysctl-mutator.fullname" .) | quote }}
+    {{- end }}
+webhooks:
+  - name: sysctl-mutator.gromware.com
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["pods"]
+        scope: "Namespaced"
+    clientConfig:
+      service:
+        name: {{ include "sysctl-mutator.fullname" . }}
+        namespace: {{ .Release.Namespace }}
+        path: "/mutate"
+        port: 443
+      {{- if eq .Values.tls.mode "selfsigned" }}
+      {{- include "sysctl-mutator.certs" . }}
+      caBundle: {{ $.sysctlMutatorCerts.ca | quote }}
+      {{- else if and (eq .Values.tls.mode "manual") .Values.tls.caBundle }}
+      caBundle: {{ .Values.tls.caBundle | quote }}
+      {{- else }}
+      caBundle: ""
+      {{- end }}
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 10
+    failurePolicy: {{ .Values.webhook.failurePolicy }}
+    namespaceSelector:
+      matchExpressions:
+        {{- if .Values.webhook.namespaceSelector.matchExpressions }}
+        {{- toYaml .Values.webhook.namespaceSelector.matchExpressions | nindent 8 }}
+        {{- end }}
+        # Exclude the namespace where the webhook itself is installed to prevent lockouts
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - {{ .Release.Namespace | quote }}
+    {{- if .Values.webhook.objectSelector }}
+    objectSelector:
+      {{- toYaml .Values.webhook.objectSelector | nindent 6 }}
+    {{- end }}
