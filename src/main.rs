@@ -77,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .expect("Failed to load TLS certificates");
 
-    let addr = format!("{}:{}", cfg.bind_address, cfg.port)
+    let addr: std::net::SocketAddr = format!("{}:{}", cfg.bind_address, cfg.port)
         .parse()
         .expect("Invalid bind address/port");
 
