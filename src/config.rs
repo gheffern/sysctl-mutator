@@ -23,6 +23,10 @@ pub struct Config {
     /// Default fallback sysctls as a JSON object (e.g. `'{"net.ipv4.ip_local_port_range": "1024 65000"}'`).
     #[arg(long, env = "DEFAULT_SYSCTLS", default_value = "{}")]
     pub default_sysctls: String,
+
+    /// Disable watching namespaces and namespace-level annotations (removes need for Namespace RBAC).
+    #[arg(long, env = "DISABLE_NAMESPACE_REFLECTOR", default_value = "false")]
+    pub disable_namespace_reflector: bool,
 }
 
 impl Config {
@@ -44,6 +48,7 @@ mod tests {
             tls_cert: String::new(),
             tls_key: String::new(),
             default_sysctls: "{}".to_string(),
+            disable_namespace_reflector: false,
         };
         let sysctls = config.parse_default_sysctls().unwrap();
         assert!(sysctls.is_empty());
@@ -57,6 +62,7 @@ mod tests {
             tls_cert: String::new(),
             tls_key: String::new(),
             default_sysctls: r#"{"net.ipv4.ip_local_port_range": "1024 65000"}"#.to_string(),
+            disable_namespace_reflector: false,
         };
         let sysctls = config.parse_default_sysctls().unwrap();
         assert_eq!(sysctls.len(), 1);
@@ -74,6 +80,7 @@ mod tests {
             tls_cert: String::new(),
             tls_key: String::new(),
             default_sysctls: "invalid-json".to_string(),
+            disable_namespace_reflector: false,
         };
         assert!(config.parse_default_sysctls().is_err());
     }

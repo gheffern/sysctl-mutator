@@ -45,24 +45,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .parse_default_sysctls()
         .expect("Failed to parse DEFAULT_SYSCTLS env/arg as JSON");
 
-    // 3. Initialize Kubernetes Client
-    let client = Client::try_default().await?;
-    let namespaces: Api<Namespace> = Api::all(client);
-
-    // 4. Set up Namespace Reflector (In-memory cache)
+    // 3. Set up Namespace Reflector (In-memory cache)
     let (reader, writer) = reflector::store();
-    let stream = watcher(namespaces, WatcherConfig::default());
-    let rf = reflector(writer, stream);
 
-    // Spawn Reflector task to watch namespaces
-    tokio::spawn(async move {
-        let mut stream = std::pin::pin!(rf);
-        while let Some(event) = stream.next().await {
-            if let Err(err) = event {
-                tracing::error!("Informer watcher error: {:?}", err);
+    if !cfg.disable_namespace_reflector {
+        tracing::info!("Initializing Kubernetes client and namespace watcher...");
+        let client = Client::try_default().await?;
+        let namespaces: Api<Namespace> = Api::all(client);
+        let stream = watcher(namespaces, WatcherConfig::default());
+        let rf = reflector(writer, stream);
+
+        // Spawn Reflector task to watch namespaces
+        tokio::spawn(async move {
+            let mut stream = std::pin::pin!(rf);
+            while let Some(event) = stream.next().await {
+                if let Err(err) = event {
+                    tracing::error!("Informer watcher error: {:?}", err);
+                }
             }
-        }
-    });
+        });
+    } else {
+        tracing::info!("Namespace reflector is disabled. Webhook running in low-privilege mode.");
+    }
 
     // 5. Build Axum Router
     let state = Arc::new(AppState {
