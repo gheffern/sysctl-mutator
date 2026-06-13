@@ -23,6 +23,9 @@ spec:
           env:
             - name: DEFAULT_SYSCTLS
               value: '{"net.ipv4.ip_local_port_range": "1024 65000"}'
+            # Set to "true" to disable namespace watching/reading permissions (Low-Privilege Mode)
+            # - name: DISABLE_NAMESPACE_REFLECTOR
+            #   value: "true"
             - name: PORT
               value: "8443"
             - name: BIND_ADDRESS
