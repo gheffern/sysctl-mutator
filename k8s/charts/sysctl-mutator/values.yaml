@@ -31,7 +31,6 @@ defaultSysctls:
 
 resources:
   limits:
-    cpu: 200m
     memory: 256Mi
   requests:
     cpu: 50m
@@ -69,14 +68,9 @@ tls:
 
 # Webhook configuration details
 webhook:
-  failurePolicy: Fail
+  failurePolicy: Ignore
+  timeoutSeconds: 1
   # namespaceSelector decides which namespaces the webhook is executed for.
-  # By default, kube-system, kube-public, and the release namespace are excluded.
-  namespaceSelector:
-    matchExpressions:
-      - key: kubernetes.io/metadata.name
-        operator: NotIn
-        values:
-          - kube-system
-          - kube-public
+  # By default, only the release namespace is dynamically excluded to prevent circular bootstrap lockouts.
+  namespaceSelector: {}
   objectSelector: {}
