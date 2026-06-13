@@ -19,7 +19,7 @@ Before deploying, choose the mode that matches your security and feature require
 | Mode | Namespace Annotations | Required RBAC Permissions | Recommended For |
 | :--- | :--- | :--- | :--- |
 | **Low-Privilege Mode** (Default) | **Disabled** (Merges default + Pod spec only) | **None** (Zero cluster-scoped permissions) | Secure, multi-tenant clusters where cluster-wide roles are restricted. |
-| **Standard Mode** | **Enabled** (Merges default + Namespace overrides + Pod spec) | Cluster-wide `get`, `list`, `watch` on `namespaces` | Standard clusters where namespace-level overrides are desired. |
+| **Namespace-Reflector Mode** | **Enabled** (Merges default + Namespace overrides + Pod spec) | Cluster-wide `get`, `list`, `watch` on `namespaces` | Standard clusters where namespace-level overrides are desired. |
 
 ---
 
@@ -37,7 +37,7 @@ Helm is the recommended deployment method because it automatically handles self-
      --create-namespace
    ```
 
-2. **Deploy with Standard Mode:**
+2. **Deploy with Namespace-Reflector Mode:**
    Enable the namespace reflector to support namespace-level annotations (requires cluster-wide namespace read/watch permissions):
    ```bash
    helm install sysctl-mutator k8s/charts/sysctl-mutator \
@@ -77,7 +77,7 @@ If you prefer deploying raw manifests, they are located under the `k8s/` directo
    kubectl apply -f k8s/webhook-config.yaml
    ```
 
-To run static manifests in Standard mode (with namespace-wide annotations enabled), set the `DISABLE_NAMESPACE_REFLECTOR` environment variable to `"false"` in `k8s/deployment.yaml` and uncomment the `ClusterRole` and `ClusterRoleBinding` resources in `k8s/rbac.yaml`.
+To run static manifests in Namespace-Reflector mode (with namespace-wide annotations enabled), set the `DISABLE_NAMESPACE_REFLECTOR` environment variable to `"false"` in `k8s/deployment.yaml` and uncomment the `ClusterRole` and `ClusterRoleBinding` resources in `k8s/rbac.yaml`.
 
 ---
 

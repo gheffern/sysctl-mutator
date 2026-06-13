@@ -59,7 +59,7 @@ env:
   2. **Cluster-wide Default (Lowest Priority)**
   *(Namespace-level annotations are ignored by default since the webhook has no access to Namespace resources).*
 
-To run in **Standard Mode** (enabling namespace annotations):
+To run in **Namespace-Reflector Mode** (enabling namespace annotations):
 1. Set `DISABLE_NAMESPACE_REFLECTOR` to `"false"` in `k8s/deployment.yaml` (or set `disableNamespaceReflector=false` in Helm).
 2. Uncomment and apply the `ClusterRole` and `ClusterRoleBinding` resources in `k8s/rbac.yaml` (or Helm will automatically create them).
 
