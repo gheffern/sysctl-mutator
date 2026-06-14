@@ -39,6 +39,12 @@ spec:
               value: "/etc/webhook/certs/tls.crt"
             - name: TLS_KEY
               value: "/etc/webhook/certs/tls.key"
+            - name: HTTP2_KEEP_ALIVE_INTERVAL_SECS
+              value: {{ .Values.http2.keepAliveIntervalSecs | quote }}
+            - name: HTTP2_KEEP_ALIVE_TIMEOUT_SECS
+              value: {{ .Values.http2.keepAliveTimeoutSecs | quote }}
+            - name: HTTP2_MAX_CONCURRENT_STREAMS
+              value: {{ .Values.http2.maxConcurrentStreams | quote }}
             {{- if .Values.disableNamespaceReflector }}
             - name: DISABLE_NAMESPACE_REFLECTOR
               value: "true"

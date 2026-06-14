@@ -87,9 +87,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Webhook server listening on HTTPS at {}", addr);
 
-    axum_server::bind_rustls(addr, tls_config)
-        .serve(app.into_make_service())
-        .await?;
+    let mut server = axum_server::bind_rustls(addr, tls_config);
+    let http2_builder = server.http_builder().http2();
+
+    if cfg.http2_keep_alive_interval_secs > 0 {
+        let interval = std::time::Duration::from_secs(cfg.http2_keep_alive_interval_secs);
+        http2_builder.keep_alive_interval(Some(interval));
+        http2_builder.keep_alive_timeout(std::time::Duration::from_secs(cfg.http2_keep_alive_timeout_secs));
+    } else {
+        http2_builder.keep_alive_interval(None);
+    }
+
+    if cfg.http2_max_concurrent_streams > 0 {
+        http2_builder.max_concurrent_streams(Some(cfg.http2_max_concurrent_streams));
+    }
+
+    server.serve(app.into_make_service()).await?;
 
     Ok(())
 }

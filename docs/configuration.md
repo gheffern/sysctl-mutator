@@ -65,6 +65,29 @@ To run in **Namespace-Reflector Mode** (enabling namespace annotations):
 
 ---
 
+## HTTP/2 Connection Tuning
+
+To prevent connection pinning (ensuring balanced traffic across webhook replicas) and avoid silent connection drops by middleboxes, `sysctl-mutator` supports HTTP/2 configuration options.
+
+| Environment Variable | CLI Argument | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `HTTP2_KEEP_ALIVE_INTERVAL_SECS` | `--http2-keep-alive-interval-secs` | `0` (Disabled) | Interval in seconds to send HTTP/2 PING frames to keep connections alive. |
+| `HTTP2_KEEP_ALIVE_TIMEOUT_SECS` | `--http2-keep-alive-timeout-secs` | `20` | Timeout in seconds to wait for a ping response before terminating the connection. |
+| `HTTP2_MAX_CONCURRENT_STREAMS` | `--http2-max-concurrent-streams` | `0` (Uses default: `200`) | Maximum simultaneous streams allowed per connection. |
+
+### Helm Overrides
+
+These settings can be tuned in Helm's `values.yaml` under the `http2` block:
+
+```yaml
+http2:
+  keepAliveIntervalSecs: 60
+  keepAliveTimeoutSecs: 20
+  maxConcurrentStreams: 200
+```
+
+---
+
 ## Mutation Mechanics
 
 When a Pod is created:

@@ -29,6 +29,15 @@ disableNamespaceReflector: true
 defaultSysctls:
   net.ipv4.ip_local_port_range: "1024 65000"
 
+# HTTP/2 connection tuning options
+http2:
+  # HTTP/2 keep-alive interval in seconds. Set to 0 to disable.
+  keepAliveIntervalSecs: 0
+  # HTTP/2 keep-alive timeout in seconds.
+  keepAliveTimeoutSecs: 20
+  # HTTP/2 max concurrent streams. Set to 0 to use hyper's default (200).
+  maxConcurrentStreams: 0
+
 resources:
   limits:
     memory: 256Mi
