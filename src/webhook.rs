@@ -72,7 +72,7 @@ pub async fn mutate_handler(
     let mut allowed = false;
 
     let (status, res) =
-        mutate_handler_inner(&state, review, &mut operation, &mut namespace, &mut allowed);
+        mutate_handler_inner(&state, &review, &mut operation, &mut namespace, &mut allowed);
 
     if let Some(metrics) = &state.metrics {
         metrics
@@ -90,7 +90,7 @@ pub async fn mutate_handler(
 
 fn mutate_handler_inner(
     state: &AppState,
-    review: AdmissionReview<Pod>,
+    review: &AdmissionReview<Pod>,
     operation: &mut String,
     namespace: &mut String,
     allowed: &mut bool,

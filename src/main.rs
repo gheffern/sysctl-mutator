@@ -29,6 +29,7 @@ pub struct Metrics {
 }
 
 impl Metrics {
+    #[allow(clippy::missing_errors_doc)]
     pub fn new() -> Result<Self, prometheus::Error> {
         let requests_total = prometheus::register_int_counter_vec!(
             "webhook_requests_total",
