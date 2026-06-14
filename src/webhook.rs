@@ -93,6 +93,7 @@ pub async fn mutate_handler(
     (status, res)
 }
 
+#[allow(clippy::too_many_lines)]
 fn mutate_handler_inner(
     state: &AppState,
     review: &AdmissionReview<Pod>,
