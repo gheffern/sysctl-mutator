@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Webhook server listening on HTTPS at {}", addr);
 
     let mut server = axum_server::bind_rustls(addr, tls_config);
-    let http2_builder = server.http_builder().http2();
+    let mut http2_builder = server.http_builder().http2();
 
     if cfg.http2_keep_alive_interval_secs > 0 {
         let interval = std::time::Duration::from_secs(cfg.http2_keep_alive_interval_secs);
