@@ -39,6 +39,18 @@ pub struct Config {
     /// HTTP/2 max concurrent streams. If set to 0, the default limit (200) is used.
     #[arg(long, env = "HTTP2_MAX_CONCURRENT_STREAMS", default_value = "0")]
     pub http2_max_concurrent_streams: u32,
+
+    /// Disable the Prometheus metrics endpoint.
+    #[arg(long, env = "DISABLE_METRICS", default_value = "false")]
+    pub disable_metrics: bool,
+
+    /// Port to expose Prometheus metrics on.
+    #[arg(long, env = "METRICS_PORT", default_value = "9090")]
+    pub metrics_port: u16,
+
+    /// Bind address for Prometheus metrics.
+    #[arg(long, env = "METRICS_BIND_ADDRESS", default_value = "0.0.0.0")]
+    pub metrics_bind_address: String,
 }
 
 impl Config {
@@ -64,6 +76,9 @@ mod tests {
             http2_keep_alive_interval_secs: 0,
             http2_keep_alive_timeout_secs: 20,
             http2_max_concurrent_streams: 0,
+            disable_metrics: false,
+            metrics_port: 9090,
+            metrics_bind_address: "0.0.0.0".to_string(),
         };
         let sysctls = config.parse_default_sysctls().unwrap();
         assert!(sysctls.is_empty());
@@ -81,6 +96,9 @@ mod tests {
             http2_keep_alive_interval_secs: 0,
             http2_keep_alive_timeout_secs: 20,
             http2_max_concurrent_streams: 0,
+            disable_metrics: false,
+            metrics_port: 9090,
+            metrics_bind_address: "0.0.0.0".to_string(),
         };
         let sysctls = config.parse_default_sysctls().unwrap();
         assert_eq!(sysctls.len(), 1);
@@ -102,6 +120,9 @@ mod tests {
             http2_keep_alive_interval_secs: 0,
             http2_keep_alive_timeout_secs: 20,
             http2_max_concurrent_streams: 0,
+            disable_metrics: false,
+            metrics_port: 9090,
+            metrics_bind_address: "0.0.0.0".to_string(),
         };
         assert!(config.parse_default_sysctls().is_err());
     }

@@ -66,6 +66,41 @@ pub async fn mutate_handler(
     State(state): State<Arc<AppState>>,
     Json(review): Json<AdmissionReview<Pod>>,
 ) -> impl IntoResponse {
+    let start = std::time::Instant::now();
+    let mut operation = "UNKNOWN".to_string();
+    let mut namespace = "unknown".to_string();
+    let mut allowed = false;
+
+    let (status, res) = mutate_handler_inner(
+        &state,
+        &review,
+        &mut operation,
+        &mut namespace,
+        &mut allowed,
+    );
+
+    if let Some(metrics) = &state.metrics {
+        metrics
+            .requests_total
+            .with_label_values(&[&operation, &allowed.to_string(), &namespace])
+            .inc();
+        metrics
+            .request_duration_seconds
+            .with_label_values(&[&operation, &allowed.to_string()])
+            .observe(start.elapsed().as_secs_f64());
+    }
+
+    (status, res)
+}
+
+#[allow(clippy::too_many_lines)]
+fn mutate_handler_inner(
+    state: &AppState,
+    review: &AdmissionReview<Pod>,
+    operation: &mut String,
+    namespace: &mut String,
+    allowed: &mut bool,
+) -> (StatusCode, Json<AdmissionReview<Pod>>) {
     let Some(req) = &review.request else {
         tracing::error!("Received AdmissionReview without request");
         return (
@@ -77,6 +112,17 @@ pub async fn mutate_handler(
             }),
         );
     };
+
+    *operation = match req.operation {
+        kube::core::admission::Operation::Create => "CREATE".to_string(),
+        kube::core::admission::Operation::Update => "UPDATE".to_string(),
+        kube::core::admission::Operation::Delete => "DELETE".to_string(),
+        kube::core::admission::Operation::Connect => "CONNECT".to_string(),
+    };
+    *namespace = req
+        .namespace
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
 
     let Some(pod) = &req.object else {
         tracing::error!("Received AdmissionRequest without Pod object");
@@ -102,6 +148,7 @@ pub async fn mutate_handler(
 
     if is_host_network || is_host_ipc {
         let mut response = AdmissionResponse::from(req);
+        *allowed = true;
         response.allowed = true;
         return (
             StatusCode::OK,
@@ -140,6 +187,7 @@ pub async fn mutate_handler(
     // If no change, allowed = true, no patch
     if target_sysctls == existing_sysctls {
         let mut response = AdmissionResponse::from(req);
+        *allowed = true;
         response.allowed = true;
         return (
             StatusCode::OK,
@@ -195,6 +243,7 @@ pub async fn mutate_handler(
     let patch: json_patch::Patch = serde_json::from_value(patch_val).unwrap();
 
     let mut response = AdmissionResponse::from(req);
+    *allowed = true;
     response.allowed = true;
     response = response.with_patch(patch).unwrap();
 

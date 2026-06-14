@@ -88,6 +88,37 @@ http2:
 
 ---
 
+## Prometheus Metrics
+
+`sysctl-mutator` exposes standard Prometheus metrics on a separate HTTP port (unauthenticated, defaults to port `9090`).
+
+| Environment Variable | CLI Argument | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `DISABLE_METRICS` | `--disable-metrics` | `false` | Set to `true` to disable the metrics endpoint. |
+| `METRICS_PORT` | `--metrics-port` | `9090` | The HTTP port to expose `/metrics` on. |
+| `METRICS_BIND_ADDRESS` | `--metrics-bind-address` | `0.0.0.0` | The IP address the metrics server binds to. |
+
+### Exposed Metrics
+
+* **`webhook_requests_total`** (Counter): Total number of mutation requests processed.
+  * *Labels:* `operation` (`CREATE`/`UPDATE`/`UNKNOWN`), `allowed` (`true`/`false`), `namespace` (target pod namespace).
+* **`webhook_request_duration_seconds`** (Histogram): Duration of mutation requests processed.
+  * *Labels:* `operation`, `allowed`.
+* **`reflector_namespace_count`** (Gauge): Number of namespaces currently held in the in-memory reflector store (only relevant if namespace reflector is enabled).
+
+### Helm Overrides
+
+Configure metrics inside Helm's `values.yaml`:
+
+```yaml
+metrics:
+  enabled: true
+  port: 9090
+  bindAddress: 0.0.0.0
+```
+
+---
+
 ## Mutation Mechanics
 
 When a Pod is created:
