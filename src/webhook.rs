@@ -71,8 +71,13 @@ pub async fn mutate_handler(
     let mut namespace = "unknown".to_string();
     let mut allowed = false;
 
-    let (status, res) =
-        mutate_handler_inner(&state, &review, &mut operation, &mut namespace, &mut allowed);
+    let (status, res) = mutate_handler_inner(
+        &state,
+        &review,
+        &mut operation,
+        &mut namespace,
+        &mut allowed,
+    );
 
     if let Some(metrics) = &state.metrics {
         metrics
