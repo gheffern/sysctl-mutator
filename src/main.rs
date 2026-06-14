@@ -11,9 +11,9 @@ use kube::runtime::{
     watcher::{watcher, Config as WatcherConfig},
 };
 use kube::{Api, Client};
+use prometheus::{Encoder, TextEncoder};
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
-use prometheus::{Encoder, TextEncoder};
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
@@ -141,7 +141,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Update namespace cache count gauge
                 if let Some(m) = &metrics_state.metrics {
                     let count = metrics_state.ns_store.state().len();
-                    m.namespace_cache_count.set(i64::try_from(count).unwrap_or(i64::MAX));
+                    m.namespace_cache_count
+                        .set(i64::try_from(count).unwrap_or(i64::MAX));
                 }
 
                 let metric_families = prometheus::gather();
