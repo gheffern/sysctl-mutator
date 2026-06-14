@@ -27,6 +27,18 @@ pub struct Config {
     /// Disable watching namespaces and namespace-level annotations (removes need for Namespace RBAC).
     #[arg(long, env = "DISABLE_NAMESPACE_REFLECTOR", default_value = "false")]
     pub disable_namespace_reflector: bool,
+
+    /// HTTP/2 keep-alive interval in seconds. If set to 0, HTTP/2 keep-alives are disabled.
+    #[arg(long, env = "HTTP2_KEEP_ALIVE_INTERVAL_SECS", default_value = "0")]
+    pub http2_keep_alive_interval_secs: u64,
+
+    /// HTTP/2 keep-alive timeout in seconds.
+    #[arg(long, env = "HTTP2_KEEP_ALIVE_TIMEOUT_SECS", default_value = "20")]
+    pub http2_keep_alive_timeout_secs: u64,
+
+    /// HTTP/2 max concurrent streams. If set to 0, the default limit (200) is used.
+    #[arg(long, env = "HTTP2_MAX_CONCURRENT_STREAMS", default_value = "0")]
+    pub http2_max_concurrent_streams: u32,
 }
 
 impl Config {
@@ -49,6 +61,9 @@ mod tests {
             tls_key: String::new(),
             default_sysctls: "{}".to_string(),
             disable_namespace_reflector: false,
+            http2_keep_alive_interval_secs: 0,
+            http2_keep_alive_timeout_secs: 20,
+            http2_max_concurrent_streams: 0,
         };
         let sysctls = config.parse_default_sysctls().unwrap();
         assert!(sysctls.is_empty());
@@ -63,6 +78,9 @@ mod tests {
             tls_key: String::new(),
             default_sysctls: r#"{"net.ipv4.ip_local_port_range": "1024 65000"}"#.to_string(),
             disable_namespace_reflector: false,
+            http2_keep_alive_interval_secs: 0,
+            http2_keep_alive_timeout_secs: 20,
+            http2_max_concurrent_streams: 0,
         };
         let sysctls = config.parse_default_sysctls().unwrap();
         assert_eq!(sysctls.len(), 1);
@@ -81,6 +99,9 @@ mod tests {
             tls_key: String::new(),
             default_sysctls: "invalid-json".to_string(),
             disable_namespace_reflector: false,
+            http2_keep_alive_interval_secs: 0,
+            http2_keep_alive_timeout_secs: 20,
+            http2_max_concurrent_streams: 0,
         };
         assert!(config.parse_default_sysctls().is_err());
     }
