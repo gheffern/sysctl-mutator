@@ -127,9 +127,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Spawn Prometheus metrics server if enabled
     if let Some(_) = &metrics {
-        let metrics_addr: std::net::SocketAddr = format!("{}:{}", cfg.metrics_bind_address, cfg.metrics_port)
-            .parse()
-            .expect("Invalid metrics bind address/port");
+        let metrics_addr: std::net::SocketAddr =
+            format!("{}:{}", cfg.metrics_bind_address, cfg.metrics_port)
+                .parse()
+                .expect("Invalid metrics bind address/port");
 
         let metrics_state = Arc::clone(&state);
         let metrics_app = Router::new().route(

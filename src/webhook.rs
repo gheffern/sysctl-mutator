@@ -71,7 +71,8 @@ pub async fn mutate_handler(
     let mut namespace = "unknown".to_string();
     let mut allowed = false;
 
-    let (status, res) = mutate_handler_inner(&state, review, &mut operation, &mut namespace, &mut allowed).await;
+    let (status, res) =
+        mutate_handler_inner(&state, review, &mut operation, &mut namespace, &mut allowed).await;
 
     if let Some(metrics) = &state.metrics {
         metrics
@@ -106,8 +107,16 @@ async fn mutate_handler_inner(
         );
     };
 
-    *operation = req.operation.clone();
-    *namespace = req.namespace.clone().unwrap_or_else(|| "unknown".to_string());
+    *operation = match req.operation {
+        kube::core::admission::Operation::Create => "CREATE".to_string(),
+        kube::core::admission::Operation::Update => "UPDATE".to_string(),
+        kube::core::admission::Operation::Delete => "DELETE".to_string(),
+        kube::core::admission::Operation::Connect => "CONNECT".to_string(),
+    };
+    *namespace = req
+        .namespace
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
 
     let Some(pod) = &req.object else {
         tracing::error!("Received AdmissionRequest without Pod object");
