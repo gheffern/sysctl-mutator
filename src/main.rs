@@ -93,7 +93,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if cfg.http2_keep_alive_interval_secs > 0 {
         let interval = std::time::Duration::from_secs(cfg.http2_keep_alive_interval_secs);
         http2_builder.keep_alive_interval(Some(interval));
-        http2_builder.keep_alive_timeout(std::time::Duration::from_secs(cfg.http2_keep_alive_timeout_secs));
+        http2_builder.keep_alive_timeout(std::time::Duration::from_secs(
+            cfg.http2_keep_alive_timeout_secs,
+        ));
     } else {
         http2_builder.keep_alive_interval(None);
     }
