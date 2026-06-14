@@ -1,6 +1,6 @@
 [package]
 name = "sysctl-mutator"
-version = "1.0.3"
+version = "1.0.4"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
@@ -20,6 +20,7 @@ clap = { version = "4.4", features = ["derive", "env"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tower = { version = "0.5", features = ["util"] }
+prometheus = { version = "0.13", default-features = false }
 
 [profile.release]
 lto = "fat"

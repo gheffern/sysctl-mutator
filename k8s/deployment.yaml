@@ -40,9 +40,17 @@ spec:
               value: "20"
             - name: HTTP2_MAX_CONCURRENT_STREAMS
               value: "0"
+            - name: DISABLE_METRICS
+              value: "false"
+            - name: METRICS_PORT
+              value: "9090"
+            - name: METRICS_BIND_ADDRESS
+              value: "0.0.0.0"
           ports:
             - containerPort: 8443
               name: https
+            - containerPort: 9090
+              name: metrics
           volumeMounts:
             - name: certs
               mountPath: /etc/webhook/certs
@@ -84,5 +92,8 @@ spec:
     - port: 443
       targetPort: 8443
       name: https
+    - port: 9090
+      targetPort: 9090
+      name: metrics
   selector:
     app: sysctl-mutator

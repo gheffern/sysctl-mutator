@@ -38,6 +38,15 @@ http2:
   # HTTP/2 max concurrent streams. Set to 0 to use hyper's default (200).
   maxConcurrentStreams: 0
 
+# Prometheus Metrics configuration
+metrics:
+  # Set to true to enable the Prometheus metrics endpoint.
+  enabled: true
+  # Port to expose Prometheus metrics on.
+  port: 9090
+  # Bind address for Prometheus metrics.
+  bindAddress: 0.0.0.0
+
 resources:
   limits:
     memory: 256Mi

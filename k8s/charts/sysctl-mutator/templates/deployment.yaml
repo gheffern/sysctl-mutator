@@ -49,10 +49,21 @@ spec:
             - name: DISABLE_NAMESPACE_REFLECTOR
               value: "true"
             {{- end }}
+            - name: DISABLE_METRICS
+              value: {{ not .Values.metrics.enabled | quote }}
+            - name: METRICS_PORT
+              value: {{ .Values.metrics.port | quote }}
+            - name: METRICS_BIND_ADDRESS
+              value: {{ .Values.metrics.bindAddress | quote }}
           ports:
             - name: https
               containerPort: {{ .Values.port }}
               protocol: TCP
+            {{- if .Values.metrics.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+            {{- end }}
           volumeMounts:
             - name: certs
               mountPath: /etc/webhook/certs
