@@ -13,6 +13,7 @@ use kube::runtime::{
 use kube::{Api, Client};
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
+use prometheus::{Encoder, TextEncoder};
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
@@ -61,6 +62,7 @@ pub struct AppState {
 }
 
 #[tokio::main]
+#[allow(clippy::too_many_lines, clippy::missing_errors_doc)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Install default crypto provider for rustls
     let _ = rustls::crypto::ring::default_provider().install_default();
@@ -126,7 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Spawn Prometheus metrics server if enabled
-    if let Some(_) = &metrics {
+    if metrics.is_some() {
         let metrics_addr: std::net::SocketAddr =
             format!("{}:{}", cfg.metrics_bind_address, cfg.metrics_port)
                 .parse()
@@ -139,10 +141,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Update namespace cache count gauge
                 if let Some(m) = &metrics_state.metrics {
                     let count = metrics_state.ns_store.state().len();
-                    m.namespace_cache_count.set(count as i64);
+                    m.namespace_cache_count.set(i64::try_from(count).unwrap_or(i64::MAX));
                 }
 
-                use prometheus::{Encoder, TextEncoder};
                 let metric_families = prometheus::gather();
                 let mut buffer = vec![];
                 let encoder = TextEncoder::new();
