@@ -240,12 +240,57 @@ fn mutate_handler_inner(
         ])
     };
 
-    let patch: json_patch::Patch = serde_json::from_value(patch_val).unwrap();
+    let patch: json_patch::Patch = match serde_json::from_value(patch_val) {
+        Ok(p) => p,
+        Err(err) => {
+            tracing::error!("Failed to parse patch JSON: {:?}", err);
+            let mut response = AdmissionResponse::from(req);
+            *allowed = false;
+            response.allowed = false;
+            let err_msg = format!("Failed to parse mutation patch: {err}");
+            response.result = kube::core::Status::failure(
+                &err_msg,
+                "InternalError",
+            )
+            .with_code(500);
+            return (
+                StatusCode::OK,
+                Json(AdmissionReview {
+                    types: review.types.clone(),
+                    request: None,
+                    response: Some(response),
+                }),
+            );
+        }
+    };
 
     let mut response = AdmissionResponse::from(req);
     *allowed = true;
     response.allowed = true;
-    response = response.with_patch(patch).unwrap();
+    
+    response = match response.with_patch(patch) {
+        Ok(res) => res,
+        Err(err) => {
+            tracing::error!("Failed to apply patch to admission response: {:?}", err);
+            let mut response = AdmissionResponse::from(req);
+            *allowed = false;
+            response.allowed = false;
+            let err_msg = format!("Failed to apply mutation patch: {err}");
+            response.result = kube::core::Status::failure(
+                &err_msg,
+                "InternalError",
+            )
+            .with_code(500);
+            return (
+                StatusCode::OK,
+                Json(AdmissionReview {
+                    types: review.types.clone(),
+                    request: None,
+                    response: Some(response),
+                }),
+            );
+        }
+    };
 
     (
         StatusCode::OK,
@@ -258,6 +303,7 @@ fn mutate_handler_inner(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use k8s_openapi::api::core::v1::PodSecurityContext;

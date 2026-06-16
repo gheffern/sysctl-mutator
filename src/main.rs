@@ -1,3 +1,5 @@
+#![deny(clippy::unwrap_used)]
+
 use axum::{
     routing::{get, post},
     Router,
@@ -228,6 +230,7 @@ pub fn build_app(state: Arc<AppState>) -> Router {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use axum::{
