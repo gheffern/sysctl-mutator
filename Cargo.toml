@@ -29,25 +29,43 @@ panic = "abort"
 strip = true
 
 [lints.clippy]
-# Blanket Groups
+# -----------------------------------------------------------------------------
+# Blanket Groups (Keep at warn to avoid breaking builds on style/experimental lints)
+# -----------------------------------------------------------------------------
 pedantic = { level = "warn", priority = -1 }
 perf = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }
 
-# Strict Panic & Error Handling Prevention
+# -----------------------------------------------------------------------------
+# Strict Panic & Error Handling Prevention (Absolute Deny)
+# -----------------------------------------------------------------------------
 unwrap_used = "deny"
 expect_used = "deny"
 panic = "deny"
 todo = "deny"
 unimplemented = "deny"
 
-# Safe Casting & Math
+# -----------------------------------------------------------------------------
+# Safe Casting & Math Upgrades (Bypasses dangerous LLM type shortcuts)
+# -----------------------------------------------------------------------------
 cast_lossless = "deny"
 cast_possible_truncation = "deny"
 cast_possible_wrap = "deny"
-float_cmp = "deny"
+cast_precision_loss = "deny" # Upgraded from pedantic
+float_cmp = "deny"           # Prevents exact equality checks (==) on floats
 
-# Code Quality & Idioms
-enum_glob_use = "deny"
-implicit_clone = "deny"
-explicit_iter_loop = "deny"
+# -----------------------------------------------------------------------------
+# Code Quality, Safety & Explicit Idioms
+# -----------------------------------------------------------------------------
+enum_glob_use = "deny"        # Forces explicit imports instead of `use MyEnum::*`
+implicit_clone = "deny"       # Catches hidden, expensive clones
+explicit_iter_loop = "deny"   # Forces proper loop idiomatics
+index_refutable_slice = "deny"# Catches risky direct slice/vec indexing
+manual_string_new = "deny"    # Upgraded from pedantic
+
+# -----------------------------------------------------------------------------
+# Documentation & Consistency Guardrails
+# -----------------------------------------------------------------------------
+missing_errors_doc = "deny"           # Upgraded from pedantic; forces documentation of Result errors
+missing_panics_doc = "deny"           # Upgraded from pedantic; forces documentation if a function can panic
+derive_partial_eq_without_eq = "deny" # Upgraded from nursery; catches structural derive inconsistencies
