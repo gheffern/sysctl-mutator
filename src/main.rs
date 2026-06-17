@@ -286,7 +286,7 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::too_many_lines, clippy::similar_names)]
     async fn test_mutate_handler_success() {
-        use k8s_openapi::api::core::v1::Pod;
+        use k8s_openapi::api::core::v1::{Pod, PodSpec};
         use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
         use std::collections::BTreeMap;
 
@@ -320,9 +320,7 @@ mod tests {
                 namespace: Some("test-ns".to_string()),
                 ..Default::default()
             },
-            spec: Some(k8s_openapi::api::core::v1::PodSpec {
-                ..Default::default()
-            }),
+            spec: Some(PodSpec::default()),
             ..Default::default()
         };
 
