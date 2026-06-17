@@ -1,5 +1,3 @@
-#![deny(clippy::unwrap_used)]
-
 use axum::{
     routing::{get, post},
     Router,
