@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cfg = config::Config::parse();
     let default_sysctls = cfg
         .parse_default_sysctls()
-        .expect("Failed to parse DEFAULT_SYSCTLS env/arg as JSON");
+        .map_err(|e| format!("Failed to parse DEFAULT_SYSCTLS env/arg as JSON: {e}"))?;
 
     // 3. Set up Namespace Reflector (In-memory cache)
     let (reader, writer) = reflector::store();
@@ -133,7 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let metrics_addr: std::net::SocketAddr =
             format!("{}:{}", cfg.metrics_bind_address, cfg.metrics_port)
                 .parse()
-                .expect("Invalid metrics bind address/port");
+                .map_err(|e| format!("Invalid metrics bind address/port: {e}"))?;
 
         let metrics_state = Arc::clone(&state);
         let metrics_app = Router::new().route(
@@ -189,11 +189,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 6. Bind Axum Server with TLS
     let tls_config = RustlsConfig::from_pem_file(&cfg.tls_cert, &cfg.tls_key)
         .await
-        .expect("Failed to load TLS certificates");
+        .map_err(|e| format!("Failed to load TLS certificates: {e}"))?;
 
     let addr: std::net::SocketAddr = format!("{}:{}", cfg.bind_address, cfg.port)
         .parse()
-        .expect("Invalid bind address/port");
+        .map_err(|e| format!("Invalid bind address/port: {e}"))?;
 
     tracing::info!("Webhook server listening on HTTPS at {}", addr);
 
@@ -228,6 +228,7 @@ pub fn build_app(state: Arc<AppState>) -> Router {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use axum::{
@@ -285,7 +286,7 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::too_many_lines, clippy::similar_names)]
     async fn test_mutate_handler_success() {
-        use k8s_openapi::api::core::v1::Pod;
+        use k8s_openapi::api::core::v1::{Pod, PodSpec};
         use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
         use std::collections::BTreeMap;
 
@@ -319,9 +320,7 @@ mod tests {
                 namespace: Some("test-ns".to_string()),
                 ..Default::default()
             },
-            spec: Some(k8s_openapi::api::core::v1::PodSpec {
-                ..Default::default()
-            }),
+            spec: Some(PodSpec::default()),
             ..Default::default()
         };
 

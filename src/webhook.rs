@@ -162,26 +162,22 @@ fn mutate_handler_inner(
 
     // 1. Determine namespace annotations
     let ns_name = &req.namespace;
-    let ns_opt = if let Some(name) = ns_name {
+    let ns_opt = ns_name.as_ref().and_then(|name| {
         let ns_ref = kube::runtime::reflector::ObjectRef::new(name);
         state.ns_store.get(&ns_ref).map(|ns| ns.as_ref().clone())
-    } else {
-        None
-    };
+    });
 
     // 2. Calculate target sysctls
     let target_sysctls = calculate_merged_sysctls(pod, ns_opt.as_ref(), &state.default_sysctls);
 
     // Get existing sysctls
-    let mut existing_sysctls = if let Some(spec) = &pod.spec {
-        if let Some(sec_ctx) = &spec.security_context {
-            sec_ctx.sysctls.clone().unwrap_or_default()
-        } else {
-            Vec::new()
-        }
-    } else {
-        Vec::new()
-    };
+    let mut existing_sysctls = pod
+        .spec
+        .as_ref()
+        .and_then(|spec| spec.security_context.as_ref())
+        .and_then(|sec_ctx| sec_ctx.sysctls.as_ref())
+        .cloned()
+        .unwrap_or_default();
     existing_sysctls.sort_by(|a, b| a.name.cmp(&b.name));
 
     // If no change, allowed = true, no patch
@@ -240,12 +236,49 @@ fn mutate_handler_inner(
         ])
     };
 
-    let patch: json_patch::Patch = serde_json::from_value(patch_val).unwrap();
+    let patch: json_patch::Patch = match serde_json::from_value(patch_val) {
+        Ok(p) => p,
+        Err(err) => {
+            tracing::error!("Failed to parse patch JSON: {:?}", err);
+            let mut response = AdmissionResponse::from(req);
+            *allowed = false;
+            response.allowed = false;
+            let err_msg = format!("Failed to parse mutation patch: {err}");
+            response.result = kube::core::Status::failure(&err_msg, "InternalError").with_code(500);
+            return (
+                StatusCode::OK,
+                Json(AdmissionReview {
+                    types: review.types.clone(),
+                    request: None,
+                    response: Some(response),
+                }),
+            );
+        }
+    };
 
     let mut response = AdmissionResponse::from(req);
     *allowed = true;
     response.allowed = true;
-    response = response.with_patch(patch).unwrap();
+
+    response = match response.with_patch(patch) {
+        Ok(res) => res,
+        Err(err) => {
+            tracing::error!("Failed to apply patch to admission response: {:?}", err);
+            let mut response = AdmissionResponse::from(req);
+            *allowed = false;
+            response.allowed = false;
+            let err_msg = format!("Failed to apply mutation patch: {err}");
+            response.result = kube::core::Status::failure(&err_msg, "InternalError").with_code(500);
+            return (
+                StatusCode::OK,
+                Json(AdmissionReview {
+                    types: review.types.clone(),
+                    request: None,
+                    response: Some(response),
+                }),
+            );
+        }
+    };
 
     (
         StatusCode::OK,
@@ -258,6 +291,7 @@ fn mutate_handler_inner(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use k8s_openapi::api::core::v1::PodSecurityContext;
