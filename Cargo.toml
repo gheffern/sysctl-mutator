@@ -29,6 +29,25 @@ panic = "abort"
 strip = true
 
 [lints.clippy]
+# Blanket Groups
 pedantic = { level = "warn", priority = -1 }
 perf = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+
+# Strict Panic & Error Handling Prevention
 unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+
+# Safe Casting & Math
+cast_lossless = "deny"
+cast_possible_truncation = "deny"
+cast_possible_wrap = "deny"
+float_cmp = "deny"
+
+# Code Quality & Idioms
+enum_glob_use = "deny"
+implicit_clone = "deny"
+explicit_iter_loop = "deny"

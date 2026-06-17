@@ -162,26 +162,22 @@ fn mutate_handler_inner(
 
     // 1. Determine namespace annotations
     let ns_name = &req.namespace;
-    let ns_opt = if let Some(name) = ns_name {
+    let ns_opt = ns_name.as_ref().and_then(|name| {
         let ns_ref = kube::runtime::reflector::ObjectRef::new(name);
         state.ns_store.get(&ns_ref).map(|ns| ns.as_ref().clone())
-    } else {
-        None
-    };
+    });
 
     // 2. Calculate target sysctls
     let target_sysctls = calculate_merged_sysctls(pod, ns_opt.as_ref(), &state.default_sysctls);
 
     // Get existing sysctls
-    let mut existing_sysctls = if let Some(spec) = &pod.spec {
-        if let Some(sec_ctx) = &spec.security_context {
-            sec_ctx.sysctls.clone().unwrap_or_default()
-        } else {
-            Vec::new()
-        }
-    } else {
-        Vec::new()
-    };
+    let mut existing_sysctls = pod
+        .spec
+        .as_ref()
+        .and_then(|spec| spec.security_context.as_ref())
+        .and_then(|sec_ctx| sec_ctx.sysctls.as_ref())
+        .cloned()
+        .unwrap_or_default();
     existing_sysctls.sort_by(|a, b| a.name.cmp(&b.name));
 
     // If no change, allowed = true, no patch
