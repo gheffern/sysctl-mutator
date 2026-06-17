@@ -244,11 +244,7 @@ fn mutate_handler_inner(
             *allowed = false;
             response.allowed = false;
             let err_msg = format!("Failed to parse mutation patch: {err}");
-            response.result = kube::core::Status::failure(
-                &err_msg,
-                "InternalError",
-            )
-            .with_code(500);
+            response.result = kube::core::Status::failure(&err_msg, "InternalError").with_code(500);
             return (
                 StatusCode::OK,
                 Json(AdmissionReview {
@@ -263,7 +259,7 @@ fn mutate_handler_inner(
     let mut response = AdmissionResponse::from(req);
     *allowed = true;
     response.allowed = true;
-    
+
     response = match response.with_patch(patch) {
         Ok(res) => res,
         Err(err) => {
@@ -272,11 +268,7 @@ fn mutate_handler_inner(
             *allowed = false;
             response.allowed = false;
             let err_msg = format!("Failed to apply mutation patch: {err}");
-            response.result = kube::core::Status::failure(
-                &err_msg,
-                "InternalError",
-            )
-            .with_code(500);
+            response.result = kube::core::Status::failure(&err_msg, "InternalError").with_code(500);
             return (
                 StatusCode::OK,
                 Json(AdmissionReview {
