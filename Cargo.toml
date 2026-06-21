@@ -10,7 +10,7 @@ axum = "0.8"
 axum-server = { version = "0.8", features = ["tls-rustls"] }
 rustls = { version = "0.23", features = ["ring"] }
 futures = "0.3"
-kube = { version = "3.1", features = ["client", "runtime", "derive", "admission"] }
+kube = { version = "4.0", features = ["client", "runtime", "derive", "admission"] }
 k8s-openapi = { version = "0.27", features = ["v1_31"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -20,7 +20,7 @@ clap = { version = "4.4", features = ["derive", "env"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tower = { version = "0.5", features = ["util"] }
-prometheus = { version = "0.13", default-features = false }
+prometheus = { version = "0.14", default-features = false }
 
 [profile.release]
 lto = "fat"
