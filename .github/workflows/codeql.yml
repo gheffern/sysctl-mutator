@@ -35,10 +35,10 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: rust
-          build-mode: manual
+          build-mode: none
 
-      - name: Build for CodeQL
-        run: cargo build --release
+      - name: Fetch and check dependencies for rust-analyzer
+        run: cargo check --all-targets
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
