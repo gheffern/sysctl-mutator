@@ -1,5 +1,5 @@
 # Stage 1: Build the Rust binary
-FROM docker.io/library/rust:bookworm AS builder
+FROM docker.io/library/rust:trixie AS builder
 WORKDIR /usr/src/app
 
 # Copy dependency manifests
@@ -17,7 +17,7 @@ COPY src/ ./src/
 RUN cargo build --release
 
 # Stage 2: Create a minimal runtime container
-FROM gcr.io/distroless/cc-debian12
+FROM gcr.io/distroless/cc-debian13
 COPY --from=builder /usr/src/app/target/release/sysctl-mutator /usr/local/bin/sysctl-mutator
 
 # Expose default port
