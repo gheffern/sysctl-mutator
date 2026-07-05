@@ -77,7 +77,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Attest build provenance
-        uses: actions/attest@v1
+        uses: actions/attest@v4
         with:
           subject-name: ghcr.io/${{ github.repository }}
           subject-digest: ${{ steps.build-push.outputs.digest }}
